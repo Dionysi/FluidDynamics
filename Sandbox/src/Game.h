@@ -27,6 +27,10 @@ private:
 	clBuffer* m_PressureInputBuffer, * m_PressureOutputBuffer;
 	clBuffer* m_ColorInputBuffer, * m_ColorOutputBuffer;
 	clBuffer* m_DivergenceInputBuffer;
+	
+	// Rendering
+	clBuffer* m_RenderBuffer;
+	clKernel* m_CopyKernel;
 
 	// Create a kernel for each simulation step.
 	clKernel* m_UpdateVelocityBoundariesKernel;

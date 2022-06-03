@@ -240,3 +240,12 @@ __kernel void HandleMouseClick(float2 cursorPos, __global float2* m_VelocityInpu
     if (sqrdDist < minRad || sqrdDist > maxRad) return;
     m_ColorInput[(int)dx + (int)dy * WIDTH] = (float4)(0.0f, 1.0f, 0.0f, 1.0f);
 };
+
+__kernel void CopyKernel(__global float4* m_ColorInput, __write_only image2d_t m_RenderBuffer) {
+    int x = get_global_id( 0 );
+    int y = get_global_id( 1 );
+
+    if (x > WIDTH || y > HEIGHT) return;
+
+    write_imagef(m_RenderBuffer, (int2)(x, y), m_ColorInput[x + y * WIDTH]);
+};

@@ -23,6 +23,8 @@ Game::Game()
 
 	Application::CLcontext()->PrintDeviceInfo();
 
+	m_RenderBuffer = new clBuffer(Application::CLcontext(), Application::Screen()->GetRenderTexture());
+
 	// Initialize our buffers.
 	m_VelocityInput = (glm::vec2*)malloc(sizeof(glm::vec2) * WIDTH * HEIGHT);
 	m_VelocityInputBuffer = new clBuffer(Application::CLcontext(), sizeof(glm::vec2) * WIDTH * HEIGHT, BufferFlags::READ_WRITE);
@@ -89,6 +91,10 @@ Game::Game()
 	m_HandleMouseClickKernel->SetArgument(1, m_VelocityInputBuffer);
 	m_HandleMouseClickKernel->SetArgument(2, m_ColorInputBuffer);
 
+	m_CopyKernel = new clKernel(m_Program, "CopyKernel");
+	m_CopyKernel->SetArgument(0, m_ColorInputBuffer);
+	m_CopyKernel->SetArgument(1, m_RenderBuffer);
+
 	InitSimulation();
 }
 
@@ -126,8 +132,12 @@ void Game::Tick(float dt)
 
 void Game::Draw(float dt)
 {
-	Application::Screen()->PlotPixels((Color*)m_ColorInput);
-	Application::Screen()->SyncPixels();
+	m_RenderBuffer->AcquireGLObject(m_CommandQueue);
+	m_CopyKernel->Enqueue(m_CommandQueue, work_dim, global_size, local_size);
+	m_RenderBuffer->ReleaseGLObject(m_CommandQueue);
+	m_CommandQueue->Synchronize();
+	//Application::Screen()->PlotPixels((Color*)m_ColorInput);
+	//Application::Screen()->SyncPixels();
 }
 
 void Game::RenderGUI(float dt)
@@ -165,11 +175,6 @@ void Game::InitSimulation()
 
 void Game::SimulateTimeStep(float dt)
 {
-	// Copy kernel data.
-	//m_VelocityInputBuffer->CopyToDevice(m_CommandQueue, m_VelocityInput, false);
-	//m_ColorInputBuffer->CopyToDevice(m_CommandQueue, m_ColorInput, false);
-
-
 	m_UpdateVelocityBoundariesKernel->Enqueue(m_CommandQueue, glm::max(WIDTH, HEIGHT), 1024);
 
 	m_AdvectVelocityKernel->SetArgument(0, &dt, sizeof(float));
@@ -201,9 +206,6 @@ void Game::SimulateTimeStep(float dt)
 	m_AdvectColorsKernel->Enqueue(m_CommandQueue, work_dim, global_size, local_size);
 
 	clBuffer::CopyBufferToBuffer(m_CommandQueue, m_ColorInputBuffer, m_ColorOutputBuffer, m_ColorInputBuffer->GetSize());
-
-	//m_VelocityInputBuffer->CopyToHost(m_CommandQueue, m_VelocityInput, false);
-	m_ColorInputBuffer->CopyToHost(m_CommandQueue, m_ColorInput, false);
 }
 
 void Game::HandleInput(float dt)
