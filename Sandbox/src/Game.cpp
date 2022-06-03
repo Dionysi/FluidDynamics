@@ -160,73 +160,45 @@ void Game::SimulateTimeStep(float dt)
 {
 	// Copy kernel data.
 	m_VelocityInputBuffer->CopyToDevice(m_CommandQueue, m_VelocityInput, false);
-	m_VelocityOutputBuffer->CopyToDevice(m_CommandQueue, m_VelocityOutput, false);
-	m_PressureInputBuffer->CopyToDevice(m_CommandQueue, m_PressureInput, false);
-	m_PressureOutputBuffer->CopyToDevice(m_CommandQueue, m_PressureOutput, false);
 	m_ColorInputBuffer->CopyToDevice(m_CommandQueue, m_ColorInput, false);
-	m_ColorOutputBuffer->CopyToDevice(m_CommandQueue, m_ColorOutput, false);
-	m_DivergenceInputBuffer->CopyToDevice(m_CommandQueue, m_DivergenceInput, true);
 
 
-	//UpdateVelocityBoundaries();
 	m_UpdateVelocityBoundariesKernel->Enqueue(m_CommandQueue, glm::max(WIDTH, HEIGHT), 1024); 
 
-	//AdvectVelocity(dt);
 	m_AdvectVelocityKernel->SetArgument(0, &dt, sizeof(float));
 	m_AdvectVelocityKernel->Enqueue(m_CommandQueue, work_dim, global_size, local_size);
 
-	//memcpy(m_VelocityInput, m_VelocityOutput, sizeof(glm::vec2) * WIDTH * HEIGHT);
 	clBuffer::CopyBufferToBuffer(m_CommandQueue, m_VelocityInputBuffer, m_VelocityOutputBuffer, m_VelocityInputBuffer->GetSize());
-
-	//m_VelocityInputBuffer->CopyToHost(m_CommandQueue, m_VelocityInput, false);
-	//m_VelocityOutputBuffer->CopyToHost(m_CommandQueue, m_VelocityOutput, true);
 
 	// First set the param for the diffuse-velocities kernel once.
 	m_DiffuseVelocitiesKernel->SetArgument(0, &dt, sizeof(float));
 
 	for (int i = 0; i < 8; i++) {
-		//DiffuseVelocities(dt);
 		m_DiffuseVelocitiesKernel->Enqueue(m_CommandQueue, work_dim, global_size, local_size);
-
-		//memcpy(m_VelocityInput, m_VelocityOutput, sizeof(glm::vec2) * WIDTH * HEIGHT);
 		clBuffer::CopyBufferToBuffer(m_CommandQueue, m_VelocityInputBuffer, m_VelocityOutputBuffer, m_VelocityInputBuffer->GetSize());
 	}
 
-
-	//ComputeDivergence();
 	m_ComputeDivergenceKernel->Enqueue(m_CommandQueue, work_dim, global_size, local_size);
 
 	for (int i = 0; i < 8; i++) {
-		//ComputePressure();
 		m_ComputePressureKernel->Enqueue(m_CommandQueue, work_dim, global_size, local_size);
-
-		//memcpy(m_PressureInput, m_PressureOutput, sizeof(float) * WIDTH * HEIGHT);
 		clBuffer::CopyBufferToBuffer(m_CommandQueue, m_PressureInputBuffer, m_PressureOutputBuffer, m_PressureInputBuffer->GetSize());
 	}
 
-	//UpdatePressureBoundaries();
 	m_UpdatePressureBoundariesKernel->Enqueue(m_CommandQueue, glm::max(WIDTH, HEIGHT), 1024);
 
-	//SubtractPressureGradient();
 	m_SubtractPressureGradientKernel->Enqueue(m_CommandQueue, work_dim, global_size, local_size);
 
-	//UpdateColorBoundaries();
 	m_UpdateColorBoundariesKernel->Enqueue(m_CommandQueue, glm::max(WIDTH, HEIGHT), 1024);
 
 
-	//AdvectColors(dt);
 	m_AdvectColorsKernel->SetArgument(0, &dt, sizeof(float));
 	m_AdvectColorsKernel->Enqueue(m_CommandQueue, work_dim, global_size, local_size);	
-	//memcpy(m_ColorInput, m_ColorOutput, sizeof(glm::vec4) * WIDTH * HEIGHT);
+
 	clBuffer::CopyBufferToBuffer(m_CommandQueue, m_ColorInputBuffer, m_ColorOutputBuffer, m_ColorInputBuffer->GetSize());
 
 	m_VelocityInputBuffer->CopyToHost(m_CommandQueue, m_VelocityInput, false);
-	m_VelocityOutputBuffer->CopyToHost(m_CommandQueue, m_VelocityOutput, false);
-	m_PressureInputBuffer->CopyToHost(m_CommandQueue, m_PressureInput, false);
-	m_PressureOutputBuffer->CopyToHost(m_CommandQueue, m_PressureOutput, false);
 	m_ColorInputBuffer->CopyToHost(m_CommandQueue, m_ColorInput, false);
-	m_ColorOutputBuffer->CopyToHost(m_CommandQueue, m_ColorOutput, false);
-	m_DivergenceInputBuffer->CopyToHost(m_CommandQueue, m_DivergenceInput, true);
 }
 
 void Game::HandleInput(float dt)
