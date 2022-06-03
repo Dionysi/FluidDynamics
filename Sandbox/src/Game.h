@@ -39,6 +39,9 @@ private:
 	clKernel* m_UpdateColorBoundariesKernel;
 	clKernel* m_AdvectColorsKernel;
 
+	clKernel* m_HandleMouseDownKernel;
+	clKernel* m_HandleMouseClickKernel;
+
 	/*
 	* Buffer containing the velocity values per grid cell.
 	*/

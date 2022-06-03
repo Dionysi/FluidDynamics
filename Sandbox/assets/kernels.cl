@@ -91,7 +91,7 @@ __kernel void ComputeDivergence(__global float2* m_VelocityInput, __global float
 
     m_DivergenceInput[x + y * WIDTH] = HALFDX * ((wR.x - wL.x) + (wT.y - wB.y));
 
-}
+};
 
 __kernel void ComputePressure(__global float* m_PressureInput, __global float* m_PressureOutput, __global float* m_DivergenceInput) {
     int x = get_global_id( 0 );
@@ -116,7 +116,7 @@ __kernel void ComputePressure(__global float* m_PressureInput, __global float* m
 
     // Evaluate the Jacobi iteration. 
     m_PressureOutput[x + y * WIDTH] = (xL + xR + xB + xT + alpha * bC) * rBeta;
-}
+};
 
 __kernel void UpdatePressureBoundaries(__global float* m_PressureInput) {
     int idx = get_global_id( 0 );
@@ -133,7 +133,7 @@ __kernel void UpdatePressureBoundaries(__global float* m_PressureInput) {
 		m_PressureInput[0 + idx * WIDTH] = m_PressureInput[1 + idx * WIDTH] * scale;
 		m_PressureInput[(WIDTH - 1) + idx * WIDTH] = m_PressureInput[(WIDTH - 2) + idx * WIDTH] * scale;
     }
-}
+};
 
 __kernel void SubtractPressureGradient(__global float* m_PressureInput, __global float2* m_VelocityInput) {
     int x = get_global_id( 0 );
@@ -150,7 +150,7 @@ __kernel void SubtractPressureGradient(__global float* m_PressureInput, __global
     float pT = m_PressureInput[x + stw * WIDTH];
 
     m_VelocityInput[x + y * WIDTH] = m_VelocityInput[x + y * WIDTH] - HALFDX * (float2)(pR - pL, pT - pB);
-}
+};
 
 __kernel void UpdateColorBoundaries(__global float4* m_ColorInput) {
     int idx = get_global_id( 0 );
@@ -167,7 +167,7 @@ __kernel void UpdateColorBoundaries(__global float4* m_ColorInput) {
 		m_ColorInput[0 + idx * WIDTH] = m_ColorInput[1 + idx * WIDTH] * scale;
 		m_ColorInput[(WIDTH - 1) + idx * WIDTH] = m_ColorInput[(WIDTH - 2) + idx * WIDTH] * scale;
     }
-}
+};
 
 __kernel void AdvectColors(float dt, __global float4* m_ColorInput, __global float4* m_ColorOutput, __global float2* m_VelocityInput) {
     int x = get_global_id( 0 );
@@ -191,4 +191,52 @@ __kernel void AdvectColors(float dt, __global float4* m_ColorInput, __global flo
     float4 v4 = m_ColorInput[stz + stw * WIDTH];
 
     m_ColorOutput[x + y * WIDTH] = mix(mix(v1, v2, t.x), mix(v3, v4, t.x), t.y);
-}
+};
+
+__kernel void HandleMouseDown(float2 cursorPos, float2 forceDirection, __global float2* m_VelocityInput, __global float4* m_ColorInput) {
+
+    float dx = (float)get_global_id( 0 ) + cursorPos.x;
+    float dy = (float)get_global_id( 1 ) + cursorPos.y;
+
+    if (dx < 0 || dy < 0 || dx > (float)WIDTH || dy > (float)HEIGHT) return;
+
+    float sqrdDist =
+        (dx - cursorPos.x) * (dx - cursorPos.x) +
+        (dy - cursorPos.y) * (dy - cursorPos.y);
+
+    float multiplier = 1.0f;
+
+    float sqrdRad = RDX * RDX * 0.75f;
+
+    if (sqrdDist > sqrdRad) return;
+    if (sqrdDist > (0.5f * sqrdRad)) multiplier = 5.0f;
+    if (sqrdDist > (0.2f * sqrdRad)) multiplier = 10.0f;
+
+    // Update the velocity and color.
+    m_VelocityInput[(int)dx + (int)dy * WIDTH] = forceDirection * multiplier;
+    m_ColorInput[(int)dx + (int)dy * WIDTH] = (float4)(1.0f, 1.0f, 1.0f, 1.0f);
+};
+
+__kernel void HandleMouseClick(float2 cursorPos, __global float2* m_VelocityInput, __global float4* m_ColorInput) {
+    
+    float dx = (float)get_global_id( 0 ) + cursorPos.x - 64.0f;
+    float dy = (float)get_global_id( 1 ) + cursorPos.y - 64.0f;
+
+    if (dx < 0 || dy < 0 || dx > (float)WIDTH || dy > (float)HEIGHT) return;
+
+    float sqrdDist =
+        (dx - cursorPos.x) * (dx - cursorPos.x) +
+        (dy - cursorPos.y) * (dy - cursorPos.y);
+
+    if (dx == cursorPos.x && dy == cursorPos.y) return;
+
+    float2 force = normalize((float2)((float)dx - cursorPos.x, (float)dy - cursorPos.y)) * 10.0f;
+
+	float maxRad = RDX * RDX;
+	float minRad = maxRad * 0.5f;
+    
+    // Update the velocity and color.
+    m_VelocityInput[(int)dx + (int)dy * WIDTH] = force;
+    if (sqrdDist < minRad || sqrdDist > maxRad) return;
+    m_ColorInput[(int)dx + (int)dy * WIDTH] = (float4)(0.0f, 1.0f, 0.0f, 1.0f);
+};

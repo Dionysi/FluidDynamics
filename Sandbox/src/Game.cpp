@@ -81,6 +81,13 @@ Game::Game()
 	m_AdvectColorsKernel->SetArgument(2, m_ColorOutputBuffer);
 	m_AdvectColorsKernel->SetArgument(3, m_VelocityInputBuffer);
 
+	m_HandleMouseDownKernel = new clKernel(m_Program, "HandleMouseDown");
+	m_HandleMouseDownKernel->SetArgument(2, m_VelocityInputBuffer);
+	m_HandleMouseDownKernel->SetArgument(3, m_ColorInputBuffer);
+	
+	m_HandleMouseClickKernel = new clKernel(m_Program, "HandleMouseClick");
+	m_HandleMouseClickKernel->SetArgument(1, m_VelocityInputBuffer);
+	m_HandleMouseClickKernel->SetArgument(2, m_ColorInputBuffer);
 
 	InitSimulation();
 }
@@ -159,20 +166,18 @@ void Game::InitSimulation()
 void Game::SimulateTimeStep(float dt)
 {
 	// Copy kernel data.
-	m_VelocityInputBuffer->CopyToDevice(m_CommandQueue, m_VelocityInput, false);
-	m_ColorInputBuffer->CopyToDevice(m_CommandQueue, m_ColorInput, false);
+	//m_VelocityInputBuffer->CopyToDevice(m_CommandQueue, m_VelocityInput, false);
+	//m_ColorInputBuffer->CopyToDevice(m_CommandQueue, m_ColorInput, false);
 
 
-	m_UpdateVelocityBoundariesKernel->Enqueue(m_CommandQueue, glm::max(WIDTH, HEIGHT), 1024); 
+	m_UpdateVelocityBoundariesKernel->Enqueue(m_CommandQueue, glm::max(WIDTH, HEIGHT), 1024);
 
 	m_AdvectVelocityKernel->SetArgument(0, &dt, sizeof(float));
 	m_AdvectVelocityKernel->Enqueue(m_CommandQueue, work_dim, global_size, local_size);
 
 	clBuffer::CopyBufferToBuffer(m_CommandQueue, m_VelocityInputBuffer, m_VelocityOutputBuffer, m_VelocityInputBuffer->GetSize());
 
-	// First set the param for the diffuse-velocities kernel once.
 	m_DiffuseVelocitiesKernel->SetArgument(0, &dt, sizeof(float));
-
 	for (int i = 0; i < 8; i++) {
 		m_DiffuseVelocitiesKernel->Enqueue(m_CommandQueue, work_dim, global_size, local_size);
 		clBuffer::CopyBufferToBuffer(m_CommandQueue, m_VelocityInputBuffer, m_VelocityOutputBuffer, m_VelocityInputBuffer->GetSize());
@@ -193,11 +198,11 @@ void Game::SimulateTimeStep(float dt)
 
 
 	m_AdvectColorsKernel->SetArgument(0, &dt, sizeof(float));
-	m_AdvectColorsKernel->Enqueue(m_CommandQueue, work_dim, global_size, local_size);	
+	m_AdvectColorsKernel->Enqueue(m_CommandQueue, work_dim, global_size, local_size);
 
 	clBuffer::CopyBufferToBuffer(m_CommandQueue, m_ColorInputBuffer, m_ColorOutputBuffer, m_ColorInputBuffer->GetSize());
 
-	m_VelocityInputBuffer->CopyToHost(m_CommandQueue, m_VelocityInput, false);
+	//m_VelocityInputBuffer->CopyToHost(m_CommandQueue, m_VelocityInput, false);
 	m_ColorInputBuffer->CopyToHost(m_CommandQueue, m_ColorInput, false);
 }
 
@@ -218,36 +223,26 @@ void Game::HandleMouseDown(float dt)
 
 	// Check if mouse is inside the screen. 
 	glm::ivec2 cursorPos = Input::CursorPosition();
-	cursorPos.y = HEIGHT - cursorPos.y - 1.0f;
 
 	if (cursorPos.x < 0 || cursorPos.y < 0 || cursorPos.x > WIDTH - 1 || cursorPos.y > HEIGHT - 1) return;
 
 	// Force-direction.
 	glm::vec2 forceDirection = Input::CursorMovement();
-	forceDirection.y *= -1.0f;
 
 	if (glm::abs(forceDirection.x) < EPSILON || glm::abs(forceDirection.y) < EPSILON) return;
+
+	forceDirection.y *= -1.0f;
 	forceDirection = glm::normalize(forceDirection);
+	cursorPos.y = HEIGHT - cursorPos.y - 1.0f;
 
-	glm::ivec2 minBounds = glm::clamp(cursorPos - 100, glm::ivec2(0), glm::ivec2(WIDTH - 1, HEIGHT - 1));
-	glm::ivec2 maxBounds = glm::clamp(cursorPos + 100, glm::ivec2(0), glm::ivec2(WIDTH - 1, HEIGHT - 1));
+	glm::vec2 pos = glm::vec2(cursorPos.x, cursorPos.y);
 
-	for (int dy = minBounds.y; dy < maxBounds.y; dy++)
-		for (int dx = minBounds.x; dx < maxBounds.x; dx++) {
-			float sqrdDist =
-				(dx - cursorPos.x) * (dx - cursorPos.x) +
-				(dy - cursorPos.y) * (dy - cursorPos.y);
-
-			float multiplier = 1.0f;
-
-			if (sqrdDist > sqrdRad) continue;
-			if (sqrdDist > (0.5f * sqrdRad)) multiplier = 5.0f;
-			if (sqrdDist > (0.2f * sqrdRad)) multiplier = 10.0f;
-
-			// Update the velocity and color.
-			m_VelocityInput[dx + dy * WIDTH] = forceDirection * multiplier;
-			m_ColorInput[dx + dy * WIDTH] = glm::vec4(1.0f);
-		}
+	m_HandleMouseDownKernel->SetArgument(0, &pos, sizeof(glm::vec2));
+	m_HandleMouseDownKernel->SetArgument(1, &forceDirection, sizeof(glm::vec2));
+	static size_t _global_size[2] = { 128, 128 };
+	static size_t _local_size[2] = { 32, 32 };
+	m_HandleMouseDownKernel->Enqueue(m_CommandQueue, work_dim, _global_size, _local_size);
+	m_CommandQueue->Synchronize();
 }
 
 void Game::HandleMouseClick(float dt)
@@ -265,22 +260,11 @@ void Game::HandleMouseClick(float dt)
 
 	if (cursorPos.x < 0 || cursorPos.y < 0 || cursorPos.x > WIDTH - 1 || cursorPos.y > HEIGHT - 1) return;
 
-	glm::ivec2 minBounds = glm::clamp(cursorPos - 100, glm::ivec2(0), glm::ivec2(WIDTH - 1, HEIGHT - 1));
-	glm::ivec2 maxBounds = glm::clamp(cursorPos + 100, glm::ivec2(0), glm::ivec2(WIDTH - 1, HEIGHT - 1));
+	glm::vec2 pos = glm::vec2(cursorPos.x, cursorPos.y);
 
-	for (int dy = minBounds.y; dy < maxBounds.y; dy++)
-		for (int dx = minBounds.x; dx < maxBounds.x; dx++) {
-			float sqrdDist =
-				(dx - cursorPos.x) * (dx - cursorPos.x) +
-				(dy - cursorPos.y) * (dy - cursorPos.y);
-
-			if (dx == cursorPos.x && dy == cursorPos.y) continue;
-
-			glm::vec2 force = glm::normalize(glm::vec2((float)dx - cursorPos.x, (float)dy - cursorPos.y)) * 10.0f;
-
-			// Update the velocity and color.
-			m_VelocityInput[dx + dy * WIDTH] = force;
-			if (sqrdDist < minRad || sqrdDist > maxRad) continue;
-			m_ColorInput[dx + dy * WIDTH] = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
-		}
+	m_HandleMouseClickKernel->SetArgument(0, &pos, sizeof(glm::vec2));
+	static size_t _global_size[2] = { 128, 128 };
+	static size_t _local_size[2] = { 32, 32 };
+	m_HandleMouseClickKernel->Enqueue(m_CommandQueue, work_dim, _global_size, _local_size);
+	m_CommandQueue->Synchronize();
 }
