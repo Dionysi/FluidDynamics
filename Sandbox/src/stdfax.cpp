@@ -697,6 +697,14 @@ void clBuffer::CopyImageToBuffer(clCommandQueue* queue, clBuffer* image, clBuffe
 	);
 }
 
+void clBuffer::CopyBufferToBuffer(clCommandQueue* queue, clBuffer* dst, clBuffer* src, size_t size, size_t offset, gpu_event* pEvent)
+{
+	CL_ERROR(
+		clEnqueueCopyBuffer(queue->GetCommandQueue(), src->GetBuffer(), dst->GetBuffer(), offset, offset, size, 0, 0, pEvent),
+		"Failed to perform device-to-device copy."
+	);
+}
+
 void clBuffer::AcquireGLObject(clCommandQueue* queue, gpu_event* pEvent) {
 	CL_ERROR(
 		clEnqueueAcquireGLObjects(queue->GetCommandQueue(), 1, &m_Buffer, 0, NULL, pEvent),

@@ -405,6 +405,16 @@ public:
 	* @param[out] pEvent			Profiling event used for retrieving profiling data.
 	*/
 	static void CopyImageToBuffer(clCommandQueue* queue, clBuffer* image, clBuffer* buffer, size_t srcOrigin[3], size_t srcRegion[3], size_t dstOrigin, gpu_event* pEvent = NULL);
+	/*
+	* Device-to-device copy. 
+	* @param[in] queue		Valid command queue.
+	* @param[in] dst		Destination device-buffer.
+	* @param[in] src		Source device-buffer.
+	* @param[in] size		Number of bytes to copy.
+	* @param[in] offset		Offset from where the copy starts (same for src and dst buffers).
+	* @param[out] pEvent			Profiling event used for retrieving profiling data.
+	*/
+	static void CopyBufferToBuffer(clCommandQueue* queue, clBuffer* dst, clBuffer* src, size_t size, size_t offset = 0, gpu_event* pEvent = NULL);
 
 	/*
 	* Acquire opengl texture. <b>NOTE:</b> buffer should be constructed from an OpenGL texture.

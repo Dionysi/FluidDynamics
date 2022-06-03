@@ -13,21 +13,48 @@ public:
 
 private:
 	/*
+	* OpenCL command queue for running our OpenCL kernels.
+	*/
+	clCommandQueue* m_CommandQueue;
+	/*
+	* Our OpenCL program which contains all OpenCL code.
+	* The program is used to create OpenCL kernels.
+	*/
+	clProgram* m_Program;
+
+	// Create a buffer for each of the input-output buffers.
+	clBuffer* m_VelocityInputBuffer, * m_VelocityOutputBuffer;
+	clBuffer* m_PressureInputBuffer, * m_PressureOutputBuffer;
+	clBuffer* m_ColorInputBuffer, * m_ColorOutputBuffer;
+	clBuffer* m_DivergenceInputBuffer;
+
+	// Create a kernel for each simulation step.
+	clKernel* m_UpdateVelocityBoundariesKernel;
+	clKernel* m_AdvectVelocityKernel;
+	clKernel* m_DiffuseVelocitiesKernel;
+	clKernel* m_ComputeDivergenceKernel;
+	clKernel* m_ComputePressureKernel;
+	clKernel* m_UpdatePressureBoundariesKernel;
+	clKernel* m_SubtractPressureGradientKernel;
+	clKernel* m_UpdateColorBoundariesKernel;
+	clKernel* m_AdvectColorsKernel;
+
+	/*
 	* Buffer containing the velocity values per grid cell.
 	*/
-	glm::vec2* m_VelocityBuffer = nullptr, * m_VelocityOutput = nullptr;
+	glm::vec2* m_VelocityInput = nullptr, * m_VelocityOutput = nullptr;
 	/*
 	* Buffer containing the pressure values per grid cell.
 	*/
-	float* m_PressureBuffer = nullptr, * m_PressureOutput = nullptr;
+	float* m_PressureInput = nullptr, * m_PressureOutput = nullptr;
 	/*
 	* Buffer containing the color values per grid cell.
 	*/
-	glm::vec4* m_ColorBuffer = nullptr, * m_ColorOutput = nullptr;
+	glm::vec4* m_ColorInput = nullptr, * m_ColorOutput = nullptr;
 	/*
 	* Buffer storing the divergence values.
 	*/
-	float* m_DivergenceBuffer = nullptr;
+	float* m_DivergenceInput = nullptr;
 
 	/*
 	* Initialize simulation values.
@@ -57,7 +84,6 @@ private:
 	void ComputePressure();
 	void UpdatePressureBoundaries();
 	void SubtractPressureGradient();
-	void ResetPressureGrid();
 	void UpdateColorBoundaries();
 	void AdvectColors(float dt);
 };

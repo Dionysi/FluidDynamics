@@ -57,5 +57,6 @@
   <ItemGroup>
     <CopyFileToFolders Include="assets\shaders\simple_tex.frag" />
     <CopyFileToFolders Include="assets\shaders\simple_tex.vert" />
+    <CopyFileToFolders Include="assets\kernels.cl" />
   </ItemGroup>
 </Project>
