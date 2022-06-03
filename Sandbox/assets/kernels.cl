@@ -24,7 +24,7 @@ __kernel void UpdateVelocityBoundaries(__global float2* m_VelocityInput) {
     }
 };
 
-__kernel void AdvectVelocity(float dt, __global float2* m_VelocityInput, __global float2* m_VelocityOutput) {
+__kernel void AdvectVelocity(float dt, __global __read_only float2* m_VelocityInput, __global __write_only float2* m_VelocityOutput) {
 
     int x = get_global_id( 0 );
     int y = get_global_id( 1 );
@@ -49,7 +49,7 @@ __kernel void AdvectVelocity(float dt, __global float2* m_VelocityInput, __globa
     m_VelocityOutput[x + y * WIDTH] = mix(mix(v1, v2, t.x), mix(v3, v4, t.x), t.y);
 };
 
-__kernel void DiffuseVelocities(float dt, __global float2* m_VelocityInput, __global float2* m_VelocityOutput) {
+__kernel void DiffuseVelocities(float dt, __global __read_only float2* m_VelocityInput, __global __write_only float2* m_VelocityOutput) {
 
     float alpha = (DX * DX) / (VISCOSITY * dt);
     float rBeta = 1.0f / (alpha + 4.0f);
@@ -75,7 +75,7 @@ __kernel void DiffuseVelocities(float dt, __global float2* m_VelocityInput, __gl
     m_VelocityOutput[x + y * WIDTH] = (xL + xR + xB + xT + alpha * bC) * rBeta;
 };
 
-__kernel void ComputeDivergence(__global float2* m_VelocityInput, __global float* m_DivergenceInput) {
+__kernel void ComputeDivergence(__global __read_only float2* m_VelocityInput, __global __write_only float* m_DivergenceInput) {
     int x = get_global_id( 0 );
     int y = get_global_id( 1 );
 
@@ -93,7 +93,7 @@ __kernel void ComputeDivergence(__global float2* m_VelocityInput, __global float
 
 };
 
-__kernel void ComputePressure(__global float* m_PressureInput, __global float* m_PressureOutput, __global float* m_DivergenceInput) {
+__kernel void ComputePressure(__global __read_only float* m_PressureInput, __global __write_only float* m_PressureOutput, __global __read_only float* m_DivergenceInput) {
     int x = get_global_id( 0 );
     int y = get_global_id( 1 );
 
@@ -135,7 +135,7 @@ __kernel void UpdatePressureBoundaries(__global float* m_PressureInput) {
     }
 };
 
-__kernel void SubtractPressureGradient(__global float* m_PressureInput, __global float2* m_VelocityInput) {
+__kernel void SubtractPressureGradient(__global __read_only float* m_PressureInput, __global __write_only float2* m_VelocityInput) {
     int x = get_global_id( 0 );
     int y = get_global_id( 1 );
 
@@ -169,7 +169,7 @@ __kernel void UpdateColorBoundaries(__global float4* m_ColorInput) {
     }
 };
 
-__kernel void AdvectColors(float dt, __global float4* m_ColorInput, __global float4* m_ColorOutput, __global float2* m_VelocityInput) {
+__kernel void AdvectColors(float dt, __global __read_only float4* m_ColorInput, __global __write_only float4* m_ColorOutput, __global __read_only float2* m_VelocityInput) {
     int x = get_global_id( 0 );
     int y = get_global_id( 1 );
 
@@ -193,7 +193,7 @@ __kernel void AdvectColors(float dt, __global float4* m_ColorInput, __global flo
     m_ColorOutput[x + y * WIDTH] = mix(mix(v1, v2, t.x), mix(v3, v4, t.x), t.y);
 };
 
-__kernel void HandleMouseDown(float2 cursorPos, float2 forceDirection, __global float2* m_VelocityInput, __global float4* m_ColorInput) {
+__kernel void HandleMouseDown(float2 cursorPos, float2 forceDirection, __global __write_only float2* m_VelocityInput, __global __write_only float4* m_ColorInput) {
 
     float dx = (float)get_global_id( 0 ) + cursorPos.x;
     float dy = (float)get_global_id( 1 ) + cursorPos.y;
@@ -217,7 +217,7 @@ __kernel void HandleMouseDown(float2 cursorPos, float2 forceDirection, __global 
     m_ColorInput[(int)dx + (int)dy * WIDTH] = (float4)(1.0f, 1.0f, 1.0f, 1.0f);
 };
 
-__kernel void HandleMouseClick(float2 cursorPos, __global float2* m_VelocityInput, __global float4* m_ColorInput) {
+__kernel void HandleMouseClick(float2 cursorPos, __global __write_only float2* m_VelocityInput, __global __write_only float4* m_ColorInput) {
     
     float dx = (float)get_global_id( 0 ) + cursorPos.x - 64.0f;
     float dy = (float)get_global_id( 1 ) + cursorPos.y - 64.0f;
@@ -241,7 +241,7 @@ __kernel void HandleMouseClick(float2 cursorPos, __global float2* m_VelocityInpu
     m_ColorInput[(int)dx + (int)dy * WIDTH] = (float4)(0.0f, 1.0f, 0.0f, 1.0f);
 };
 
-__kernel void CopyKernel(__global float4* m_ColorInput, __write_only image2d_t m_RenderBuffer) {
+__kernel void CopyKernel(__global __read_only float4* m_ColorInput, __write_only image2d_t m_RenderBuffer) {
     int x = get_global_id( 0 );
     int y = get_global_id( 1 );
 
