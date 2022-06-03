@@ -76,15 +76,5 @@ private:
 	* Apply forces when the mouse left-button was clicked.
 	*/
 	void HandleMouseClick(float dt);
-
-	void UpdateVelocityBoundaries();
-	void AdvectVelocity(float dt);
-	void DiffuseVelocities(float dt);
-	void ComputeDivergence();
-	void ComputePressure();
-	void UpdatePressureBoundaries();
-	void SubtractPressureGradient();
-	void UpdateColorBoundaries();
-	void AdvectColors(float dt);
 };
 
