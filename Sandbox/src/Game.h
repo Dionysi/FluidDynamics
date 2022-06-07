@@ -57,7 +57,6 @@ private:
 	void ComputePressure();
 	void UpdatePressureBoundaries();
 	void SubtractPressureGradient();
-	void ResetPressureGrid();
 	void UpdateColorBoundaries();
 	void AdvectColors(float dt);
 };

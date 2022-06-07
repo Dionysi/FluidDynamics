@@ -106,7 +106,6 @@ void Game::SimulateTimeStep(float dt)
 	UpdatePressureBoundaries();
 
 	SubtractPressureGradient();
-	ResetPressureGrid();
 
 	UpdateColorBoundaries();
 	AdvectColors(dt);
@@ -355,16 +354,6 @@ void Game::SubtractPressureGradient()
 			float pT = m_PressureBuffer[x + stw * WIDTH];
 
 			m_VelocityBuffer[x + y * WIDTH] = m_VelocityBuffer[x + y * WIDTH] - HALFDX * glm::vec2(pR - pL, pT - pB);
-		}
-	}
-}
-
-void Game::ResetPressureGrid()
-{
-#pragma omp parallel for schedule(dynamic) num_threads(NUM_THREADS)
-	for (int y = 0; y < HEIGHT; y++) {
-		for (int x = 0; x < WIDTH; x++) {
-			m_PressureBuffer[x + y * WIDTH] = 0.0f;
 		}
 	}
 }
