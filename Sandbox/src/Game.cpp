@@ -178,9 +178,6 @@ void Game::SimulateTimeStep(float dt)
 	//memcpy(m_VelocityInput, m_VelocityOutput, sizeof(glm::vec2) * WIDTH * HEIGHT);
 	clBuffer::CopyBufferToBuffer(m_CommandQueue, m_VelocityInputBuffer, m_VelocityOutputBuffer, m_VelocityInputBuffer->GetSize());
 
-	//m_VelocityInputBuffer->CopyToHost(m_CommandQueue, m_VelocityInput, false);
-	//m_VelocityOutputBuffer->CopyToHost(m_CommandQueue, m_VelocityOutput, true);
-
 	// First set the param for the diffuse-velocities kernel once.
 	m_DiffuseVelocitiesKernel->SetArgument(0, &dt, sizeof(float));
 
@@ -317,11 +314,6 @@ void Game::HandleMouseClick(float dt)
 void Game::UpdateVelocityBoundaries()
 {
 
-	//// Execute kernel.
-	//m_VelocityInputBuffer->CopyToDevice(m_CommandQueue, m_VelocityInput, true);
-	//m_UpdateVelocityBoundariesKernel->Enqueue(m_CommandQueue, glm::max(WIDTH, HEIGHT), 1024);
-	//m_VelocityInputBuffer->CopyToHost(m_CommandQueue, m_VelocityInput, true);
-
 	const float scale = -1.0f;
 	// Loop over the x-boundaries.
 	for (int x = 0; x < WIDTH; x++) {
@@ -339,13 +331,6 @@ void Game::UpdateVelocityBoundaries()
 
 void Game::AdvectVelocity(float dt)
 {
-	//m_AdvectVelocityKernel->SetArgument(0, &dt, sizeof(float));
-	//m_VelocityInputBuffer->CopyToDevice(m_CommandQueue, m_VelocityInput, false);
-	//m_VelocityOutputBuffer->CopyToDevice(m_CommandQueue, m_VelocityOutput, true);
-	//m_AdvectVelocityKernel->Enqueue(m_CommandQueue, work_dim, global_size, local_size);
-	//m_VelocityInputBuffer->CopyToHost(m_CommandQueue, m_VelocityInput, false);
-	//m_VelocityOutputBuffer->CopyToHost(m_CommandQueue, m_VelocityOutput, true);
-
 
 	#pragma omp parallel for schedule(dynamic) num_threads(NUM_THREADS)
 		for (int y = 0; y < HEIGHT; y++) {
@@ -375,13 +360,6 @@ void Game::AdvectVelocity(float dt)
 
 void Game::DiffuseVelocities(float dt)
 {
-	//m_DiffuseVelocitiesKernel->SetArgument(0, &dt, sizeof(float));
-	//m_VelocityInputBuffer->CopyToDevice(m_CommandQueue, m_VelocityInput, false);
-	//m_VelocityOutputBuffer->CopyToDevice(m_CommandQueue, m_VelocityOutput, true);
-	//m_DiffuseVelocitiesKernel->Enqueue(m_CommandQueue, work_dim, global_size, local_size);
-	//m_VelocityInputBuffer->CopyToHost(m_CommandQueue, m_VelocityInput, false);
-	//m_VelocityOutputBuffer->CopyToHost(m_CommandQueue, m_VelocityOutput, true);
-
 		float alpha = (DX * DX) / (VISCOSITY * dt);
 		float rBeta = 1.0f / (alpha + 4.0f);
 	
