@@ -165,10 +165,6 @@ void Game::InitSimulation()
 
 void Game::SimulateTimeStep(float dt)
 {
-	// Copy kernel data.
-	//m_VelocityInputBuffer->CopyToDevice(m_CommandQueue, m_VelocityInput, false);
-	//m_ColorInputBuffer->CopyToDevice(m_CommandQueue, m_ColorInput, false);
-
 
 	m_UpdateVelocityBoundariesKernel->Enqueue(m_CommandQueue, glm::max(WIDTH, HEIGHT), 1024);
 
